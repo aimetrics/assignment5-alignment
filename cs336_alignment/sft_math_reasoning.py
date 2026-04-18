@@ -26,6 +26,7 @@ from drgrpo_grader import r1_zero_reward_fn
 
 # Configuration constants (as specified)
 BASE_MODEL = "/home/magnus-share/xuhu/model/Qwen2___5-Math-1___5B"
+BASE_MODEL = "/proj/Qwen2.5-Math-1.5B"
 VAL_PATH = "data/gsm8k/test.jsonl"
 RAW_TRAIN = "data/sft/sft_gpt-oss-120b.jsonl"
 FILTERED_TRAIN = "data/sft/sft_gpt-oss-120b_filtered.jsonl"
@@ -194,7 +195,7 @@ def run_sft_experiment(train_data_path: str, max_examples: int = -1,
 
     # 5. Initialize vLLM (GPU 1)
     print("Initializing vLLM on cuda:1...")
-    device_eval = "cuda:1"
+    device_eval = "cuda:0"
     llm = init_vllm(BASE_MODEL, device_eval, SEED)
 
     # Evaluation sampling parameters
@@ -325,7 +326,7 @@ def run_sft_experiment(train_data_path: str, max_examples: int = -1,
 
             global_step += 1
 
-    Save final model
+    # Save final model
     print("Saving final model...")
     final_save_dir = os.path.join(f"results/sft_experiments_{dataset_tag}_{size_tag}", "latest")
     model.save_pretrained(final_save_dir)

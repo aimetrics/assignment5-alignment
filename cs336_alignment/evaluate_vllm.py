@@ -161,7 +161,7 @@ def _load_vllm():
     return LLM, SamplingParams
 
 # Define the model path and prompt path
-MODEL_PATH = "Qwen/Qwen2.5-Math-1.5B"
+MODEL_PATH = "/proj/Qwen2.5-Math-1.5B"
 PROMPT_PATH = "cs336_alignment/prompts/r1_zero.prompt"
 MATH_VALIDATION_PATH = "data/gsm8k/test.jsonl"
 OUTPUT_DIR = "results/base"

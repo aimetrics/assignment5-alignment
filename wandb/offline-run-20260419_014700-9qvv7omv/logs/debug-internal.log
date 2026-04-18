@@ -1,0 +1,16 @@
+{"time":"2026-04-19T01:47:00.551125494+08:00","level":"INFO","msg":"stream: starting","core version":"0.19.11","symlink path":"/proj/assignment5-alignment/wandb/offline-run-20260419_014700-9qvv7omv/logs/debug-core.log"}
+{"time":"2026-04-19T01:47:00.551601932+08:00","level":"ERROR","msg":"monitor: failed to initialize GPU asset: monitor: could not create portfile"}
+{"time":"2026-04-19T01:47:00.557511318+08:00","level":"WARN","msg":"GraphQL client is nil, skipping feature loading"}
+{"time":"2026-04-19T01:47:00.557635431+08:00","level":"INFO","msg":"created new stream","id":"9qvv7omv"}
+{"time":"2026-04-19T01:47:00.557656696+08:00","level":"INFO","msg":"stream: started","id":"9qvv7omv"}
+{"time":"2026-04-19T01:47:00.5576649+08:00","level":"INFO","msg":"writer: Do: started","stream_id":"9qvv7omv"}
+{"time":"2026-04-19T01:47:00.557685183+08:00","level":"INFO","msg":"handler: started","stream_id":"9qvv7omv"}
+{"time":"2026-04-19T01:47:00.557670942+08:00","level":"INFO","msg":"sender: started","stream_id":"9qvv7omv"}
+{"time":"2026-04-19T01:47:00.600658419+08:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2026-04-19T01:47:11.818321077+08:00","level":"INFO","msg":"stream: closing","id":"9qvv7omv"}
+{"time":"2026-04-19T01:47:11.81835163+08:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2026-04-19T01:47:11.818365878+08:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2026-04-19T01:47:11.818426301+08:00","level":"INFO","msg":"handler: closed","stream_id":"9qvv7omv"}
+{"time":"2026-04-19T01:47:11.818433169+08:00","level":"INFO","msg":"writer: Close: closed","stream_id":"9qvv7omv"}
+{"time":"2026-04-19T01:47:11.818441868+08:00","level":"INFO","msg":"sender: closed","stream_id":"9qvv7omv"}
+{"time":"2026-04-19T01:47:11.818521917+08:00","level":"INFO","msg":"stream: closed","id":"9qvv7omv"}

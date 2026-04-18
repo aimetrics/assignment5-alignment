@@ -1,0 +1,16 @@
+{"time":"2026-04-19T01:34:33.146328569+08:00","level":"INFO","msg":"stream: starting","core version":"0.19.11","symlink path":"/proj/assignment5-alignment/wandb/offline-run-20260419_013432-thro1jf2/logs/debug-core.log"}
+{"time":"2026-04-19T01:34:33.146786223+08:00","level":"ERROR","msg":"monitor: failed to initialize GPU asset: monitor: could not create portfile"}
+{"time":"2026-04-19T01:34:33.151881192+08:00","level":"WARN","msg":"GraphQL client is nil, skipping feature loading"}
+{"time":"2026-04-19T01:34:33.151980633+08:00","level":"INFO","msg":"created new stream","id":"thro1jf2"}
+{"time":"2026-04-19T01:34:33.152002846+08:00","level":"INFO","msg":"stream: started","id":"thro1jf2"}
+{"time":"2026-04-19T01:34:33.152018291+08:00","level":"INFO","msg":"writer: Do: started","stream_id":"thro1jf2"}
+{"time":"2026-04-19T01:34:33.152035061+08:00","level":"INFO","msg":"handler: started","stream_id":"thro1jf2"}
+{"time":"2026-04-19T01:34:33.152071961+08:00","level":"INFO","msg":"sender: started","stream_id":"thro1jf2"}
+{"time":"2026-04-19T01:34:33.195415538+08:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2026-04-19T01:34:34.197452482+08:00","level":"INFO","msg":"stream: closing","id":"thro1jf2"}
+{"time":"2026-04-19T01:34:34.197485993+08:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2026-04-19T01:34:34.197501546+08:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2026-04-19T01:34:34.197610089+08:00","level":"INFO","msg":"handler: closed","stream_id":"thro1jf2"}
+{"time":"2026-04-19T01:34:34.197625621+08:00","level":"INFO","msg":"writer: Close: closed","stream_id":"thro1jf2"}
+{"time":"2026-04-19T01:34:34.197666716+08:00","level":"INFO","msg":"sender: closed","stream_id":"thro1jf2"}
+{"time":"2026-04-19T01:34:34.197679626+08:00","level":"INFO","msg":"stream: closed","id":"thro1jf2"}

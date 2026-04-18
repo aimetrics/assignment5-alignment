@@ -1,0 +1,9 @@
+{"time":"2026-04-19T01:54:46.731825741+08:00","level":"INFO","msg":"stream: starting","core version":"0.19.11","symlink path":"/proj/assignment5-alignment/wandb/offline-run-20260419_015446-on8q2yhj/logs/debug-core.log"}
+{"time":"2026-04-19T01:54:46.732230665+08:00","level":"ERROR","msg":"monitor: failed to initialize GPU asset: monitor: could not create portfile"}
+{"time":"2026-04-19T01:54:46.73660186+08:00","level":"WARN","msg":"GraphQL client is nil, skipping feature loading"}
+{"time":"2026-04-19T01:54:46.736664419+08:00","level":"INFO","msg":"created new stream","id":"on8q2yhj"}
+{"time":"2026-04-19T01:54:46.736680352+08:00","level":"INFO","msg":"stream: started","id":"on8q2yhj"}
+{"time":"2026-04-19T01:54:46.736691715+08:00","level":"INFO","msg":"writer: Do: started","stream_id":"on8q2yhj"}
+{"time":"2026-04-19T01:54:46.736707678+08:00","level":"INFO","msg":"handler: started","stream_id":"on8q2yhj"}
+{"time":"2026-04-19T01:54:46.736697165+08:00","level":"INFO","msg":"sender: started","stream_id":"on8q2yhj"}
+{"time":"2026-04-19T01:54:46.779026167+08:00","level":"INFO","msg":"Starting system monitor"}
