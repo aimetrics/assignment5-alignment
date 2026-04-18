@@ -19,6 +19,7 @@ dependencies = [
     "vllm==0.7.2; sys_platform == 'linux'",
     "wandb>=0.19.8",
     "xopen>=2.0.2",
+    "pdfplumber>=0.11.9",
 ]
 
 [tool.setuptools.packages.find]
