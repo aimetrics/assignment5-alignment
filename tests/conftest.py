@@ -19,7 +19,7 @@ _A = TypeVar("_A", np.ndarray, Tensor)
 
 def _canonicalize_array(arr: _A) -> np.ndarray:
     if isinstance(arr, Tensor):
-        arr = arr.detach().cpu().numpy()
+        arr = arr.detach().cpu().float().numpy()
     return arr
 
 
@@ -210,7 +210,12 @@ def output_strs():
 
 @pytest.fixture
 def model_id():
-    return "/data/a5-alignment/models/Qwen2.5-Math-1.5B"
+    if (override := os.environ.get("CS336_TEST_MODEL_ID")):
+        return override
+    local = Path("/data/a5-alignment/models/Qwen2.5-Math-1.5B")
+    if local.is_dir():
+        return local
+    return "Qwen/Qwen2.5-Math-1.5B"
 
 
 @pytest.fixture
@@ -220,7 +225,7 @@ def tokenizer(model_id):
 
 @pytest.fixture
 def model(model_id):
-    return AutoModelForCausalLM.from_pretrained(model_id)
+    return AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.float32)
 
 
 @pytest.fixture
