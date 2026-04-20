@@ -31,6 +31,7 @@ VAL_PATH = "data/gsm8k/test.jsonl"
 RAW_TRAIN = "data/sft/sft_gpt-oss-120b.jsonl"
 FILTERED_TRAIN = "data/sft/sft_gpt-oss-120b_filtered.jsonl"
 PROMPT_TEMPLATE_PATH = "cs336_alignment/prompts/r1_zero.prompt"
+RESULT_PATH = "/root/autodl-tmp/"
 
 # Training hyperparameters (following run_sft.sh)
 BATCH_SIZE = 4
@@ -308,7 +309,7 @@ def run_sft_experiment(
                 model.eval()
                 load_policy_into_vllm_instance(model, llm)
 
-                eval_dir = f"results/sft_experiments_{dataset_tag}_{size_tag}/step_{global_step}"
+                eval_dir = f"{RESULT_PATH}/sft_experiments_{dataset_tag}_{size_tag}/step_{global_step}"
                 os.makedirs(eval_dir, exist_ok=True)
 
                 # Use GSM8K test set for evaluation
@@ -344,7 +345,7 @@ def run_sft_experiment(
 
     # Save final model
     print("Saving final model...")
-    final_save_dir = os.path.join(f"results/sft_experiments_{dataset_tag}_{size_tag}", "latest")
+    final_save_dir = os.path.join(f"{RESULT_PATH}/sft_experiments_{dataset_tag}_{size_tag}", "latest")
     model.save_pretrained(final_save_dir)
     tokenizer.save_pretrained(final_save_dir)
     print(f"Final model saved to {final_save_dir}")

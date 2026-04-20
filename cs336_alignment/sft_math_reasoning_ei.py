@@ -32,6 +32,7 @@ BASE_MODEL = "/proj/Qwen2.5-Math-1.5B"
 TRAIN_DATA = "data/sft/sft_gpt-oss-120b_filtered.jsonl"
 VAL_DATA = "data/gsm8k/test.jsonl"
 PROMPT_TEMPLATE_PATH = "cs336_alignment/prompts/r1_zero.prompt"
+RESULT_PATH = "/root/autodl-tmp/"
 
 # Training hyperparameters (following run_sft_sweep_ei.sh)
 BATCH_SIZE = 4
@@ -364,7 +365,7 @@ def run_expert_iteration_experiment(
         print(f"Evaluating after EI step {step}...")
         load_policy_into_vllm(policy, llm)
 
-        eval_dir = f"results/ei_experiments_{experiment_tag}_Db{expert_batch_size}_G{rollouts_per_question}_Ep{sft_epochs_per_step}/step_{step}"
+        eval_dir = f"{RESULT_PATH}/ei_experiments_{experiment_tag}_Db{expert_batch_size}_G{rollouts_per_question}_Ep{sft_epochs_per_step}/step_{step}"
         os.makedirs(eval_dir, exist_ok=True)
 
         metrics = evaluate_vllm(
@@ -392,7 +393,7 @@ def run_expert_iteration_experiment(
         )
 
         # Save checkpoint (only keep latest)
-        checkpoint_dir = f"results/ei_experiments_{experiment_tag}_Db{expert_batch_size}_G{rollouts_per_question}_Ep{sft_epochs_per_step}/latest"
+        checkpoint_dir = f"{RESULT_PATH}/ei_experiments_{experiment_tag}_Db{expert_batch_size}_G{rollouts_per_question}_Ep{sft_epochs_per_step}/latest"
         policy.save_pretrained(checkpoint_dir)
         tokenizer.save_pretrained(checkpoint_dir)
 
