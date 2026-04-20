@@ -38,14 +38,20 @@ BATCH_SIZE = 4
 GRAD_ACCUM = 8
 LR = 5e-5
 MAX_GRAD_NORM = 1.0
+
+# 专家迭代多少轮
 N_EI_STEPS = 5
 
 # Dataset sizes to sweep (expert_batch_size Db)
+# 每一轮用于训练的“专家数据量”
 EXPERT_BATCH_SIZES = [512, 1024, 2048]
+
 # Rollouts per question (G)
+# 每个问题生成多少个候选答案
 ROLLOUTS_PER_QUESTION = [1, 4, 8, 16]
 
 # SFT epochs per step
+# 每一轮 EI，用 expert data 训练多少轮（epoch）
 SFT_EPOCHS_PER_STEP = [1, 4, 8, 16]
 
 SEED = 2026
