@@ -68,6 +68,11 @@ def init_vllm(model_id: str, device: str, seed: int, gpu_memory_utilization: flo
     
     vllm_set_random_seed(seed)
 
+    # Monkeypatch from TRL:
+    # https://github.com/huggingface/trl/blob/22759c820867c8659d00082ba8cf004e963873c1/trl/trainer/grpo_trainer.py
+    # Patch vLLM to make sure we can
+    # (1) place the vLLM model on the desired device (world_size_patch) and
+    # (2) avoid a test that is not designed for our setting (profiling_patch).
     world_size_patch = patch("torch.distributed.get_world_size", return_value=1)
     profiling_patch = patch(
         "vllm.worker.worker.Worker._assert_memory_footprint_increased_during_profiling",
@@ -86,6 +91,7 @@ def init_vllm(model_id: str, device: str, seed: int, gpu_memory_utilization: flo
 
 def load_policy_into_vllm_instance(policy: torch.nn.Module, llm: LLM):
     print("Loading policy weights into vLLM...")
+    # Copied from https://github.com/huggingface/trl/blob/22759c820867c8659d00082ba8cf004e963873c1/trl/trainer/grpo_trainer.py#L670.
     state_dict = policy.state_dict()
     llm.llm_engine.model_executor.driver_worker.model_runner.model.load_weights(state_dict.items())
     print("Weights loaded.")
