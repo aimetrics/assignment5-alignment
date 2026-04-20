@@ -1,6 +1,5 @@
 from __future__ import annotations
 from typing import Any, Dict, List, Optional
-import torch
 
 def log_generations(
         prompts: List[str],

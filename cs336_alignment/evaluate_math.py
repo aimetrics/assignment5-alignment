@@ -149,7 +149,13 @@ if __name__ == "__main__":
     # Initialize vLLM
     print(f"Initializing vLLM model from {MODEL_PATH}...")
     # Removed `torch.bfloat16` as `LLM` init doesn't take it directly, `dtype` parameter handles it.
-    llm = LLM(model=MODEL_PATH, dtype=torch.bfloat16) 
+    llm = LLM(
+        model=MODEL_PATH, 
+        dtype=torch.bfloat16,
+        gpu_memory_utilization=0.8,
+        enable_prefix_caching=True,
+        tensor_parallel_size=1
+    ) 
 
     # Set sampling parameters
     sampling_params = SamplingParams(

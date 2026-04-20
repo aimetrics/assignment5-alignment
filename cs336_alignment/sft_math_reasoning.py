@@ -25,7 +25,6 @@ from drgrpo_grader import r1_zero_reward_fn
 # from datetime import datetime
 
 # Configuration constants (as specified)
-BASE_MODEL = "/home/magnus-share/xuhu/model/Qwen2___5-Math-1___5B"
 BASE_MODEL = "/proj/Qwen2.5-Math-1.5B"
 VAL_PATH = "data/gsm8k/test.jsonl"
 RAW_TRAIN = "data/sft/sft_gpt-oss-120b.jsonl"
