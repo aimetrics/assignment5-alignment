@@ -5,6 +5,7 @@ Based on sft.py and run_sft.sh logic, adapted for the specific requirements.
 
 import os
 os.environ["VLLM_USE_V1"] = "0" # LLM v0.9.x 虽然引入了 V1 引擎，但仍然保留了完整的 V0 引擎代码。设置 VLLM_USE_V1=0 会告诉 vLLM 初始化旧版的 LLMEngine
+import argparse
 import json
 import random
 import torch
@@ -118,8 +119,13 @@ def log_generations_to_wandb(results_path: str, step: int, run_name: str):
 
 # --- Main Training Logic ---
 
-def run_sft_experiment(train_data_path: str, max_examples: int = -1,
-                      dataset_tag: str = "raw", size_tag: str = "full"):
+def run_sft_experiment(
+    train_data_path: str,
+    max_examples: int = -1,
+    dataset_tag: str = "raw",
+    size_tag: str = "full",
+    wandb_mode: str = "offline",
+):
     """Run a single SFT experiment."""
 
     print(f"\n{'='*50}")
@@ -131,7 +137,7 @@ def run_sft_experiment(train_data_path: str, max_examples: int = -1,
 
     # Setup wandb
     run_name = f"sft_{dataset_tag}_{size_tag}_{max_examples if max_examples > 0 else 'full'}"
-    wandb.init(project="cs336-a5-sft-v2", name=run_name, mode="offline", config={
+    wandb.init(project="cs336-a5-sft-v2", name=run_name, mode=wandb_mode, config={
         "dataset_tag": dataset_tag,
         "size_tag": size_tag,
         "max_examples": max_examples,
@@ -266,8 +272,8 @@ def run_sft_experiment(train_data_path: str, max_examples: int = -1,
                 # 在 vocab 维度（dim=2）上取 labels 指定的那个 token 的 log_prob
                 dim=2,
                 # -> [bs, seq_len, 1], 和 gather 对齐
-                index=labels.unsqueeze(2)
-            ).squeeze(2) # -> [bs, seq_len]
+                index=labels.unsqueeze(-1)
+            ).squeeze(-1) # -> [bs, seq_len]
 
             # 5. 计算损失并反向传播
             loss, _ = sft_microbatch_train_step(
@@ -340,8 +346,12 @@ def run_sft_experiment(train_data_path: str, max_examples: int = -1,
     print("Training Complete.")
     wandb.finish()
 
-def main():
-    """Main function to run all SFT experiments."""
+def main(wandb_mode: str = "offline"):
+    """Main function to run all SFT experiments.
+
+    Args:
+        wandb_mode: ``wandb.init(..., mode=...)`` — ``\"offline\"`` or ``\"online\"``.
+    """
 
     # Create results directory
     os.makedirs("results", exist_ok=True)
@@ -355,7 +365,8 @@ def main():
             train_data_path=RAW_TRAIN,
             max_examples=size,
             dataset_tag="raw",
-            size_tag=str(size)
+            size_tag=str(size),
+            wandb_mode=wandb_mode,
         )
 
     # Raw dataset full
@@ -364,7 +375,8 @@ def main():
         train_data_path=RAW_TRAIN,
         max_examples=-1,  # Use full dataset
         dataset_tag="raw",
-        size_tag="full"
+        size_tag="full",
+        wandb_mode=wandb_mode,
     )
 
     # Part 2: Filtered dataset experiments — now loaded directly from file
@@ -387,7 +399,8 @@ def main():
                 train_data_path=FILTERED_TRAIN,
                 max_examples=size,
                 dataset_tag="filtered",
-                size_tag=str(size)
+                size_tag=str(size),
+                wandb_mode=wandb_mode,
             )
 
     # Filtered full
@@ -395,10 +408,20 @@ def main():
         train_data_path=FILTERED_TRAIN,
         max_examples=-1,
         dataset_tag="filtered",
-        size_tag="full"
+        size_tag="full",
+        wandb_mode=wandb_mode,
     )
 
     print("\nAll SFT experiments completed!")
 
 if __name__ == "__main__":
-    main()
+    _parser = argparse.ArgumentParser(description="SFT math reasoning experiments")
+    _parser.add_argument(
+        "--wandb-mode",
+        type=str,
+        choices=("offline", "online"),
+        default="online",
+        help="wandb.init mode: offline (default) or online",
+    )
+    _args = _parser.parse_args()
+    main(wandb_mode=_args.wandb_mode)
