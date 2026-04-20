@@ -73,6 +73,7 @@ def tokenize_prompt_and_output(
 def compute_entropy(logits: torch.Tensor) -> torch.Tensor:
     """
     Compute per-token entropy of next-token predictions.
+    LLM在每个 token 位置上的预测不确定性（entropy，熵）越大，说明模型越不确定，越难预测。
 
     Args:
         logits: Tensor of shape (batch_size, sequence_length, vocab_size)
@@ -82,6 +83,7 @@ def compute_entropy(logits: torch.Tensor) -> torch.Tensor:
     """
     log_probs = F.log_softmax(logits, dim=-1)
     probs = torch.exp(log_probs)
+    # H(P) = - Σ p(x) log p(x)
     return -(probs * log_probs).sum(dim=-1)
 
 
@@ -103,8 +105,8 @@ def get_response_log_probs(
 
     Returns:
         dict with:
-          - "log_probs": (B, T)
-          - "token_entropy": (B, T) if requested
+          - "log_probs": (B, T), 整个序列的 log_probs 越大，说明模型对这个序列的预测越准确。
+          - "token_entropy": (B, T) if requested, 每个 token 的 entropy 越大，说明模型对这个 token 的预测越不确定。
     """
     # Forward: logits (B, T, V)
     logits = model(input_ids).logits
