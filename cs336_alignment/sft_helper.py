@@ -40,7 +40,9 @@ def tokenize_prompt_and_output(
     if pad_id is None:
         pad_id = tokenizer.eos_token_id if tokenizer.eos_token_id is not None else 0
 
-    # ========= 关键：先 pad full_ids，再 shift =========
+    # ========= 关键：先 pad，再 shift =========
+    # 先统一时间轴，再做自回归对齐，避免错位
+    # 1. 统一长度（pad）,让所有序列在同一个“时间轴”; 2. 做 shift（构造预测任务）; 3. 只在 output 上计算loss
     max_full_len = max(len(x) for x in full_ids_list) if bs > 0 else 0
     full_padded = torch.full((bs, max_full_len), pad_id, dtype=torch.long)
 

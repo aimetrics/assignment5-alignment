@@ -250,19 +250,24 @@ def run_sft_experiment(train_data_path: str, max_examples: int = -1,
             # 3. 分词
             tokenized = tokenize_prompt_and_output(prompt_strs, output_strs, tokenizer)
             input_ids = tokenized["input_ids"].to(device_policy)
+            # labels: [bs, seq_len]
             labels = tokenized["labels"].to(device_policy)
             response_mask = tokenized["response_mask"].to(device_policy)
             
             # 4. 前向传播
             outputs = model(input_ids)
+            # shape: [batch_size, seq_len, vocab_size]
             logits = outputs.logits
-
+            # log P(token_k | context). log_probs = log( softmax(logits) )
             log_probs = torch.log_softmax(logits, dim=-1)
+            # shape: [bs, seq_len]
             per_token_log_probs = torch.gather(
                 log_probs,
+                # 在 vocab 维度（dim=2）上取 labels 指定的那个 token 的 log_prob
                 dim=2,
+                # -> [bs, seq_len, 1], 和 gather 对齐
                 index=labels.unsqueeze(2)
-            ).squeeze(2)
+            ).squeeze(2) # -> [bs, seq_len]
 
             # 5. 计算损失并反向传播
             loss, _ = sft_microbatch_train_step(
