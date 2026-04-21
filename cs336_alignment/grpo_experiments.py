@@ -50,10 +50,10 @@ import gc
 @dataclass
 class GRPOConfig:
     # Model & Data
-    base_model: str = "/home/magnus-share/xuhu/model/Qwen2___5-Math-1___5B"
+    base_model: str = "/proj/Qwen2.5-Math-1.5B"
     train_data_path: str = "data/sft/sft_gpt-oss-120b_filtered.jsonl"
     val_data_path: str = "data/gsm8k/test.jsonl"
-    output_dir: str = "results/grpo"
+    output_dir: str = "/root/autodl-tmp/results/grpo"
     prompt_template_path: str = "cs336_alignment/prompts/r1_zero.prompt"
 
     # GRPO Hyperparams
@@ -190,7 +190,7 @@ def run_grpo_experiment(cfg: GRPOConfig) -> Dict[str, float]:
     wandb.init(
         project=cfg.wandb_project,
         name=cfg.run_name,
-        mode="offline",
+        mode="online",
         config=asdict(cfg),
         id=cfg.run_name, # <--- 关键修改：强制指定 run ID (如果想覆盖旧记录)
         resume="allow",  # <--- 配合 id 使用，允许覆盖或继续

@@ -8,6 +8,14 @@ We include a supplemental (and completely optional) assignment on safety alignme
 If you see any issues with the assignment handout or code, please feel free to
 raise a GitHub issue or open a pull request with a fix.
 
+## Author & acknowledgments
+
+**Author (this edition):** aimetrics
+
+**Acknowledgment:** This version’s documentation and experiment setup lean heavily on the community course reproduction in [DataWhale diy-llm — `coursework/assignment5-alignment`](https://github.com/datawhalechina/diy-llm/tree/main/coursework/assignment5-alignment). Thank you to the DataWhale contributors for the detailed walkthrough and runnable layout.
+
+**说明（中文）：** 本次仓库版本由 **aimetrics** 维护整理；大量参考了上述 DataWhale 课程仓库中的 assignment5-alignment 材料。
+
 ## Setup
 
 As in previous assignments, we use `uv` to manage dependencies.
