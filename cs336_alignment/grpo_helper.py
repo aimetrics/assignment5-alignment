@@ -411,7 +411,7 @@ def grpo_microbatch_train_step(
     if gradient_accumulation_steps <= 0:
         raise ValueError(f"gradient_accumulation_steps must be > 0, got {gradient_accumulation_steps}")
 
-    # 1) per-token loss
+    # 1) token-level: per-token loss
     per_token_loss, meta = compute_policy_gradient_loss(
         policy_log_probs=policy_log_probs,
         loss_type=loss_type,
@@ -421,8 +421,11 @@ def grpo_microbatch_train_step(
         cliprange=cliprange,
     )  # (B,T)
 
-    # 2) masked mean over response tokens => (B,)
+    # 2) sequence-level: masked mean over response tokens => (B,)
     mask = response_mask.to(dtype=per_token_loss.dtype, device=per_token_loss.device)
+    # length_norm 决定了长度归一化策略, 对训练的影响：
+    # - masked_mean：     每条样本按自己的有效 token 数平均，长短样本更公平
+    # - masked_normalize：统一除以固定常数，长回答通常贡献更大总梯度
     if length_norm == "masked_mean":
         per_example_loss = masked_mean(per_token_loss, mask, dim=1)  # (B,)
     elif length_norm == "masked_normalize":
@@ -430,13 +433,15 @@ def grpo_microbatch_train_step(
     else:
         raise ValueError(f"Unknown length_norm: {length_norm}")
 
-    # 3) batch mean => scalar
+    # 3) batch-level: batch mean => scalar
     microbatch_loss = per_example_loss.mean()
 
     # 4) grad-acc scaling
     loss = microbatch_loss / float(gradient_accumulation_steps)
 
     # 5) backward
+    # 累计梯度是想让“分 k 次算梯度再相加” 和 “一次性用大 batch 算梯度” 得到同样的平均梯度
+    # backward() 默认是累加梯度，不是自动取平均，所以你要配套4)，除以k次.
     loss.backward()
 
     # ---- metadata to log ----
