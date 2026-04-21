@@ -11,7 +11,12 @@
       "Bash(python3 -c \"import sys,json; [print\\(list\\(json.loads\\(l\\).keys\\(\\)\\)\\) for l in sys.stdin]\")",
       "Bash(python3 -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); print\\(list\\(d.keys\\(\\)\\)\\)\")",
       "Bash(python3 -c ' *)",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Bash(.venv/bin/python3 -c \"import pdfminer; print\\('ok'\\)\")",
+      "Bash(.venv/bin/python3 -c \"import fitz; print\\('pymupdf ok'\\)\")",
+      "Bash(sed -n '295,302p' /Users/chenwq/fanchi/proj/opensource/cs336/assignment5-alignment/cs336_alignment/sft_math_reasoning_ei.py)",
+      "Bash(sed -n '354,362p' /Users/chenwq/fanchi/proj/opensource/cs336/assignment5-alignment/cs336_alignment/sft_math_reasoning_ei.py)",
+      "Bash(sed -n '378,384p' /Users/chenwq/fanchi/proj/opensource/cs336/assignment5-alignment/cs336_alignment/sft_math_reasoning_ei.py)"
     ]
   }
 }

@@ -1,0 +1,38 @@
+---
+description: Explain Python code in a clear teaching style
+alwaysApply: true
+---
+
+# Python Explanation Style
+
+When the user asks to explain Python code, prefer a teaching style that is precise, structured, and easy to follow.
+
+- Start with one sentence that states the code's main purpose in plain language.
+- Prefer a three-part explanation when the topic is non-trivial: engineering view, mathematical alignment, and usage cautions.
+- Explain inputs first: what each parameter means, expected shape/type, and its role in the computation.
+- Then explain the execution flow step by step, following the code order.
+- For tensor code, explicitly call out shapes, broadcasting, dtype/device alignment, and where each one happens.
+- Distinguish local behavior from algorithmic meaning: explain both "what this line does" and "why the algorithm wants it".
+- When useful, give a tiny concrete numeric example.
+- Call out important checks, assumptions, and edge cases, especially shape checks and failure conditions.
+- Explain enough that the user could re-derive the key formula or implementation choice on their own, not just restate the code.
+- When relevant, include tuning intuition: which arguments or hyperparameters change behavior, what trade-offs they control, and what failure modes appear when set poorly.
+- Include practical usage notes: expected input organization, invariants, debugging hints, and what to verify before modifying the code.
+- If the user asks about one line, answer that line directly first, then add nearby context only if it helps.
+- In Chinese conversations, answer in natural Chinese while keeping code identifiers in backticks.
+- Keep the tone patient and explanatory, not terse or purely formal.
+
+Preferred flow:
+
+1. Purpose
+2. Engineering view
+3. Mathematical alignment
+4. Usage cautions and tuning notes
+5. Edge cases or gotchas
+
+Example:
+
+- Good: "This line is not doing broadcasting; it is aligning dtype and device so the multiplication on the next line can run safely."
+- Good: "Broadcasting happens in `advantages * policy_log_probs`, where `(B, 1)` expands to `(B, T)`."
+- Good: "From the engineering view, this line only prepares tensors for a safe multiply; mathematically, the actual broadcast happens in the next line, where one scalar advantage is shared across all tokens of the sequence."
+- Good: "If you want to tune this behavior, focus on the scale and variance of `advantages`; overly large values will amplify token-level gradients and make training unstable."
