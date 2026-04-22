@@ -11,6 +11,7 @@ os.environ["VLLM_USE_V1"] = "0"  # Use vLLM v0 for compatibility
 import argparse
 import json
 import random
+from typing import Any
 import torch
 import numpy as np
 from tqdm import tqdm
@@ -25,7 +26,6 @@ import wandb
 from sft_helper import tokenize_prompt_and_output, sft_microbatch_train_step
 from evaluate_math import evaluate_vllm
 from drgrpo_grader import r1_zero_reward_fn
-from datetime import datetime
 
 # Configuration constants (as specified by user)
 BASE_MODEL = "/proj/Qwen2.5-Math-1.5B"
@@ -56,6 +56,8 @@ ROLLOUTS_PER_QUESTION = [1, 4, 8, 16]
 SFT_EPOCHS_PER_STEP = [1, 4, 8, 16]
 
 SEED = 2026
+QUESTION_SAMPLING_MODES = ("fixed_once", "resample_each_step")
+DEFAULT_QUESTION_SAMPLING_MODE = "fixed_once"
 
 # --- Helper: Prompt Formatting ---
 def load_prompt_template(path: str) -> str:
@@ -75,6 +77,40 @@ def load_prompt_template(path: str) -> str:
 def format_prompt(template: str, question: str) -> str:
     """Applies the R1-Zero template to the raw math question."""
     return template.format(question=question.strip())
+
+
+def _sample_question_batch(
+    all_questions: list[Any],
+    expert_batch_size: int,
+    rng: random.Random,
+) -> list[Any]:
+    current_db_size = min(len(all_questions), expert_batch_size)
+    return rng.sample(all_questions, current_db_size)
+
+
+def build_question_batches(
+    all_questions: list[Any],
+    expert_batch_size: int,
+    n_ei_steps: int,
+    sampling_mode: str,
+    seed: int,
+) -> list[list[Any]]:
+    if sampling_mode not in QUESTION_SAMPLING_MODES:
+        raise ValueError(
+            f"Unsupported sampling_mode={sampling_mode!r}. "
+            f"Expected one of {QUESTION_SAMPLING_MODES}."
+        )
+
+    rng = random.Random(seed)
+
+    if sampling_mode == "fixed_once":
+        batch = _sample_question_batch(all_questions, expert_batch_size, rng)
+        return [list(batch) for _ in range(n_ei_steps)]
+
+    return [
+        _sample_question_batch(all_questions, expert_batch_size, rng)
+        for _ in range(n_ei_steps)
+    ]
 
 # --- Helper: Entropy Calculation ---
 def compute_mean_entropy(logits, mask):
@@ -163,6 +199,7 @@ def run_expert_iteration_experiment(
     sft_epochs_per_step: int = 1,
     experiment_tag: str = "default",
     wandb_mode: str = "offline",
+    question_sampling_mode: str = DEFAULT_QUESTION_SAMPLING_MODE,
 ):
     """Run a single Expert Iteration experiment."""
 
@@ -172,11 +209,15 @@ def run_expert_iteration_experiment(
     print(f"{'='*60}")
 
     # Setup wandb
-    run_name = f"ei_{experiment_tag}_Db{expert_batch_size}_G{rollouts_per_question}_Ep{sft_epochs_per_step}"
+    run_name = (
+        f"ei_{experiment_tag}_{question_sampling_mode}"
+        f"_Db{expert_batch_size}_G{rollouts_per_question}_Ep{sft_epochs_per_step}"
+    )
     wandb.init(project="cs336-a5-sft-ei", name=run_name, mode=wandb_mode, config={
         "expert_batch_size": expert_batch_size,
         "rollouts_per_question": rollouts_per_question,
         "sft_epochs_per_step": sft_epochs_per_step,
+        "question_sampling_mode": question_sampling_mode,
         "n_ei_steps": N_EI_STEPS,
         "batch_size": BATCH_SIZE,
         "grad_accum": GRAD_ACCUM,
@@ -227,16 +268,18 @@ def run_expert_iteration_experiment(
     device_eval = "cuda:1"
     llm = init_vllm(BASE_MODEL, device_eval, SEED)
 
-    # 5. Prepare Dataset (Sample questions ONCE for all EI steps)
-    print(f"Sampling {expert_batch_size} questions for Expert Iteration...")
-    current_db_size = min(len(all_questions), expert_batch_size)
-    batch_questions = random.sample(all_questions, current_db_size)
-
-    # Pre-format prompts
-    prompts = [format_prompt(template, q.get('problem', q.get('question', ''))) for q in batch_questions]
-    ground_truths = [q.get('answer', q.get('expected_answer', '')) for q in batch_questions]
-
-    print(f"Prepared {len(prompts)} prompts for Expert Iteration.")
+    # 5. Prepare per-step question batches.
+    print(
+        f"Preparing {expert_batch_size}-question EI batches with "
+        f"sampling_mode={question_sampling_mode}..."
+    )
+    question_batches = build_question_batches(
+        all_questions=all_questions,
+        expert_batch_size=expert_batch_size,
+        n_ei_steps=N_EI_STEPS,
+        sampling_mode=question_sampling_mode,
+        seed=SEED,
+    )
 
     # 6. Sampling Parameters
     rollout_params = SamplingParams(
@@ -260,6 +303,17 @@ def run_expert_iteration_experiment(
     # --- EXPERT ITERATION LOOP ---
     for step in range(1, N_EI_STEPS + 1):
         print(f"\n=== Expert Iteration Step {step}/{N_EI_STEPS} ===")
+
+        batch_questions = question_batches[step - 1]
+        prompts = [
+            format_prompt(template, q.get('problem', q.get('question', '')))
+            for q in batch_questions
+        ]
+        ground_truths = [
+            q.get('answer', q.get('expected_answer', ''))
+            for q in batch_questions
+        ]
+        print(f"Prepared {len(prompts)} prompts for EI step {step}.")
 
         # A. Update vLLM with current policy weights
         load_policy_into_vllm(policy, llm)
@@ -365,7 +419,10 @@ def run_expert_iteration_experiment(
         print(f"Evaluating after EI step {step}...")
         load_policy_into_vllm(policy, llm)
 
-        eval_dir = f"{RESULT_PATH}/ei_experiments_{experiment_tag}_Db{expert_batch_size}_G{rollouts_per_question}_Ep{sft_epochs_per_step}/step_{step}"
+        eval_dir = (
+            f"{RESULT_PATH}/ei_experiments_{experiment_tag}_{question_sampling_mode}"
+            f"_Db{expert_batch_size}_G{rollouts_per_question}_Ep{sft_epochs_per_step}/step_{step}"
+        )
         os.makedirs(eval_dir, exist_ok=True)
 
         metrics = evaluate_vllm(
@@ -393,14 +450,20 @@ def run_expert_iteration_experiment(
         )
 
         # Save checkpoint (only keep latest)
-        checkpoint_dir = f"{RESULT_PATH}/ei_experiments_{experiment_tag}_Db{expert_batch_size}_G{rollouts_per_question}_Ep{sft_epochs_per_step}/latest"
+        checkpoint_dir = (
+            f"{RESULT_PATH}/ei_experiments_{experiment_tag}_{question_sampling_mode}"
+            f"_Db{expert_batch_size}_G{rollouts_per_question}_Ep{sft_epochs_per_step}/latest"
+        )
         policy.save_pretrained(checkpoint_dir)
         tokenizer.save_pretrained(checkpoint_dir)
 
     print("Expert Iteration Complete.")
     wandb.finish()
 
-def main(wandb_mode: str = "offline"):
+def main(
+    wandb_mode: str = "offline",
+    question_sampling_mode: str = DEFAULT_QUESTION_SAMPLING_MODE,
+):
     """Main function to run all Expert Iteration experiments.
 
     Args:
@@ -421,6 +484,7 @@ def main(wandb_mode: str = "offline"):
             sft_epochs_per_step=4,
             experiment_tag="batch_sweep",
             wandb_mode=wandb_mode,
+            question_sampling_mode=question_sampling_mode,
         )
 
     # 2. Rollout & Epoch Sweep (Fix Db=512)
@@ -435,6 +499,7 @@ def main(wandb_mode: str = "offline"):
                 sft_epochs_per_step=4,
                 experiment_tag="rollout_sweep",
                 wandb_mode=wandb_mode,
+                question_sampling_mode=question_sampling_mode,
             )
 
     # Different epoch numbers
@@ -447,6 +512,7 @@ def main(wandb_mode: str = "offline"):
                 sft_epochs_per_step=epochs,
                 experiment_tag=tag,
                 wandb_mode=wandb_mode,
+                question_sampling_mode=question_sampling_mode,
             )
 
     print("\nAll Expert Iteration experiments completed!")
@@ -460,5 +526,18 @@ if __name__ == "__main__":
         default="online",
         help="wandb.init mode: offline (default) or online",
     )
+    _parser.add_argument(
+        "--question-sampling-mode",
+        type=str,
+        choices=QUESTION_SAMPLING_MODES,
+        default=DEFAULT_QUESTION_SAMPLING_MODE,
+        help=(
+            "fixed_once reuses one Db for all EI steps; "
+            "resample_each_step draws a fresh Db each step."
+        ),
+    )
     _args = _parser.parse_args()
-    main(wandb_mode=_args.wandb_mode)
+    main(
+        wandb_mode=_args.wandb_mode,
+        question_sampling_mode=_args.question_sampling_mode,
+    )
