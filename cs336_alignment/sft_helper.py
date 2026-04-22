@@ -9,6 +9,24 @@ def tokenize_prompt_and_output(
         output_strs: List[str],
         tokenizer: PreTrainedTokenizerBase,
 ) -> Dict[str, torch.Tensor]:
+    """
+    Tokenize the prompt and output strings, and construct a mask that is 1
+    for the response tokens and 0 for other tokens (prompt or padding).
+
+    Args:
+        prompt_strs: list[str], the prompt strings.
+        output_strs: list[str], the output strings.
+        tokenizer: PreTrainedTokenizer, the tokenizer to use.
+
+    Returns:
+        dict[str, torch.Tensor]:
+            "input_ids": torch.Tensor of shape (batch_size, max(prompt_and_output_lens) - 1):
+                the tokenized prompt and output strings, with the final token sliced off.
+            "labels": torch.Tensor of shape (batch_size, max(prompt_and_output_lens) - 1):
+                shifted input_ids (i.e., the input_ids without the first token).
+            "response_mask": torch.Tensor of shape (batch_size, max(prompt_and_output_lens) - 1):
+                a mask on the response tokens in `labels`.
+    """
     assert len(prompt_strs) == len(output_strs)
     bs = len(prompt_strs)
 
@@ -73,17 +91,21 @@ def tokenize_prompt_and_output(
 def compute_entropy(logits: torch.Tensor) -> torch.Tensor:
     """
     Compute per-token entropy of next-token predictions.
+    把模型在每个位置输出的 logits 转成“下一个 token 的预测熵”，也就是衡量模型在该位置有多不确定。
     LLM在每个 token 位置上的预测不确定性（entropy，熵）越大，说明模型越不确定，越难预测。
 
     Args:
         logits: Tensor of shape (batch_size, sequence_length, vocab_size)
 
     Returns:
+        # 每个位置对应一个熵值标量，值越大表示分布越分散、模型越拿不准；值越小表示分布越尖锐、模型越确定。
         Tensor of shape (batch_size, sequence_length)
     """
+    # 把最后一维 vocab_size 上的原始分数(unnormalized logits)归一化成对数概率 log p。
     log_probs = F.log_softmax(logits, dim=-1)
     probs = torch.exp(log_probs)
     # H(P) = - Σ p(x) log p(x)
+    # 把 vocab_size 那一维求和，得到每个 batch、每个时间步的熵
     return -(probs * log_probs).sum(dim=-1)
 
 
@@ -97,29 +119,27 @@ def get_response_log_probs(
     Get per-token conditional log-probabilities log p_theta(x_t | x_<t)
     for a causal LM, and optionally per-token entropy.
 
+    注意: padding 位置的 log_probs 和 entropy 也计算了. 哪些位置该参与 loss，通常要靠外面的 mask 决定。  
     Args:
         model: HF causal LM (on correct device; set eval/no_grad outside if desired)
-        input_ids: (B, T)
-        labels: (B, T)
-        return_token_entropy: if True, also return token_entropy (B, T)
+        input_ids: (batch_size, sequence_length)
+        labels: (batch_size, sequence_length)
+        return_token_entropy: if True, also return token_entropy (batch_size, sequence_length)
 
     Returns:
         dict with:
-          - "log_probs": (B, T), 整个序列的 log_probs 越大，说明模型对这个序列的预测越准确。
-          - "token_entropy": (B, T) if requested, 每个 token 的 entropy 越大，说明模型对这个 token 的预测越不确定。
+          - "log_probs": (batch_size, sequence_length), 整个序列的 log_probs 越大，说明模型对这个序列的预测越准确。
+          - "token_entropy": (batch_size, sequence_length) if requested, 每个 token 的 entropy 越大，说明模型对这个 token 的预测越不确定。
     """
-    # Forward: logits (B, T, V)
+    # Forward: logits (batch_size, sequence_length, vocabulary_size)
     logits = model(input_ids).logits
-
-    # log-probs over vocab: (B, T, V)
+    # log-probs over vocab: (batch_size, sequence_length, vocabulary_size)
     log_probs_vocab = F.log_softmax(logits, dim=-1)
-
     # Select log-prob of the label token at each position.
-    # labels: (B, T) -> (B, T, 1) for gather
+    # labels: (batch_size, sequence_length) -> (batch_size, sequence_length, 1) for gather
     log_probs = torch.gather(log_probs_vocab, dim=-1, index=labels.unsqueeze(-1)).squeeze(-1)
 
     out: Dict[str, torch.Tensor] = {"log_probs": log_probs}
-
     if return_token_entropy:
         out["token_entropy"] = compute_entropy(logits)
 
@@ -137,13 +157,11 @@ def masked_normalize(
     """
     # 只保留 mask == 1 的位置，其余置 0
     masked_tensor = tensor * mask
-
     # 求和
     if dim is None:
         summed = masked_tensor.sum()
     else:
         summed = masked_tensor.sum(dim=dim)
-
     # 归一化
     return summed / normalize_constant
 
@@ -156,28 +174,31 @@ def sft_microbatch_train_step(
 ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
     """
     One SFT microbatch step: masked NLL, batch-mean, normalize, grad-acc scaling, backward.
+    Args:
+        policy_log_probs: (batch_size, sequence_length), per-token log probabilities of the policy.
+        response_mask: (batch_size, sequence_length), the mask of the response tokens.
+        gradient_accumulation_steps: int, the number of microbatches per optimizer step.
+        normalize_constant: float, the constant to normalize the loss by.
+
+    Returns:
+        tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+            - loss: (scalar), the microbatch loss.
+            - metadata: dict[str, torch.Tensor], the metadata.
     """
     # mask -> same dtype as log probs
     mask = response_mask.to(dtype=policy_log_probs.dtype)
-
     # per-token NLL
-    per_token_nll = -policy_log_probs  # (B, T)
-
+    per_token_nll = -policy_log_probs  # (batch_size, sequence_length)
     # sum over sequence per example (mask out prompt/pad)
-    per_example_nll = (per_token_nll * mask).sum(dim=1)  # (B,)
-
+    per_example_nll = (per_token_nll * mask).sum(dim=1)  # (batch_size,)
     # normalize by constant (as assignment says)
     per_example_nll = per_example_nll / float(normalize_constant)
-
     # batch mean
     microbatch_loss = per_example_nll.mean()  # scalar
-
     # scale for gradient accumulation
     loss = microbatch_loss / float(gradient_accumulation_steps)
-
     # backward
     loss.backward()
-
     metadata = {
         "microbatch_loss": microbatch_loss.detach(),
     }
