@@ -1,0 +1,44 @@
+(alignment) root@autodl-container-119b47bef5-483d8995:/proj/assignment5-alignment# python cs336_alignment/evaluate_math.py
+INFO 04-22 21:03:32 __init__.py:190] Automatically detected platform cuda.
+Initializing vLLM model from /proj/Qwen2.5-Math-1.5B...
+INFO 04-22 21:03:39 config.py:542] This model supports multiple tasks: {'score', 'generate', 'reward', 'embed', 'classify'}. Defaulting to 'generate'.
+INFO 04-22 21:03:39 llm_engine.py:234] Initializing a V0 LLM engine (v0.7.2) with config: model='/proj/Qwen2.5-Math-1.5B', speculative_config=None, tokenizer='/proj/Qwen2.5-Math-1.5B', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, override_neuron_config=None, tokenizer_revision=None, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=4096, download_dir=None, load_format=LoadFormat.AUTO, tensor_parallel_size=1, pipeline_parallel_size=1, disable_custom_all_reduce=False, quantization=None, enforce_eager=False, kv_cache_dtype=auto,  device_config=cuda, decoding_config=DecodingConfig(guided_decoding_backend='xgrammar'), observability_config=ObservabilityConfig(otlp_traces_endpoint=None, collect_model_forward_time=False, collect_model_execute_time=False), seed=0, served_model_name=/proj/Qwen2.5-Math-1.5B, num_scheduler_steps=1, multi_step_stream_outputs=True, enable_prefix_caching=True, chunked_prefill_enabled=False, use_async_output_proc=True, disable_mm_preprocessor_cache=False, mm_processor_kwargs=None, pooler_config=None, compilation_config={"splitting_ops":[],"compile_sizes":[],"cudagraph_capture_sizes":[256,248,240,232,224,216,208,200,192,184,176,168,160,152,144,136,128,120,112,104,96,88,80,72,64,56,48,40,32,24,16,8,4,2,1],"max_capture_size":256}, use_cached_outputs=False,
+INFO 04-22 21:03:40 cuda.py:230] Using Flash Attention backend.
+INFO 04-22 21:03:41 model_runner.py:1110] Starting to load model /proj/Qwen2.5-Math-1.5B...
+Loading safetensors checkpoint shards:   0% Completed | 0/1 [00:00<?, ?it/s]
+Loading safetensors checkpoint shards: 100% Completed | 1/1 [00:00<00:00,  1.67it/s]
+Loading safetensors checkpoint shards: 100% Completed | 1/1 [00:00<00:00,  1.67it/s]
+
+INFO 04-22 21:03:42 model_runner.py:1115] Loading model weights took 2.8797 GB
+INFO 04-22 21:03:43 worker.py:267] Memory profiling takes 0.54 seconds
+INFO 04-22 21:03:43 worker.py:267] the current vLLM instance can use total_gpu_memory (79.25GiB) x gpu_memory_utilization (0.80) = 63.40GiB
+INFO 04-22 21:03:43 worker.py:267] model weights take 2.88GiB; non_torch_memory takes 0.09GiB; PyTorch activation peak memory takes 1.40GiB; the rest of the memory reserved for KV Cache is 59.03GiB.
+INFO 04-22 21:03:43 executor_base.py:110] # CUDA blocks: 138168, # CPU blocks: 9362
+INFO 04-22 21:03:43 executor_base.py:115] Maximum concurrency for 4096 tokens per request: 539.72x
+INFO 04-22 21:03:46 model_runner.py:1434] Capturing cudagraphs for decoding. This may lead to unexpected consequences if the model is not static. To run the model in eager mode, set 'enforce_eager=True' or use '--enforce-eager' in the CLI. If out-of-memory error occurs during cudagraph capture, consider decreasing `gpu_memory_utilization` or switching to eager mode. You can also reduce the `max_num_seqs` as needed to decrease memory usage.
+Capturing CUDA graph shapes: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 35/35 [00:15<00:00,  2.31it/s]
+INFO 04-22 21:04:01 model_runner.py:1562] Graph capturing finished in 15 secs, took 0.19 GiB
+INFO 04-22 21:04:01 llm_engine.py:431] init engine (profile, create kv cache, warmup model) took 18.92 seconds
+Generating responses for 1319 prompts...
+Processed prompts: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1319/1319 [00:32<00:00, 40.34it/s, est. speed input: 6213.07 toks/s, output: 6717.89 toks/s]
+Evaluation Results:
+  Average Answer Reward: 0.1380
+  Average Format Reward: 0.4200
+  Average Total Reward: 0.1380
+  Combo Counts: Counter({(0, 0): 765, (1, 0): 372, (1, 1): 182})
+Results saved to results/base/zero_shot_math_evaluation.jsonl
+
+Final Evaluation Metrics:
+{
+    "n": 1319,
+    "format_rate": 0.4200151630022744,
+    "answer_accuracy": 0.1379833206974981,
+    "reward_mean": 0.1379833206974981,
+    "counts": {
+        "format=1 answer=1": 182,
+        "format=1 answer=0": 372,
+        "format=0 answer=0": 765,
+        "format=0 answer=1": 0
+    }
+}
+[rank0]:[W422 21:04:39.282597862 ProcessGroupNCCL.cpp:1250] Warning: WARNING: process group has NOT been destroyed before we destruct ProcessGroupNCCL. On normal program exit, the application should call destroy_process_group to ensure that any pending NCCL operations have finished in this process. In rare cases this process can exit before this point and block the progress of another member of the process group. This constraint has always been present,  but this warning has only been added since PyTorch 2.4 (function operator())
