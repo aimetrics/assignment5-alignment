@@ -209,7 +209,7 @@ def compute_grpo_clip_loss(
     A = advantages.to(dtype=policy_log_probs.dtype, device=policy_log_probs.device)
 
     # ratio r = pi_theta / pi_old = exp(log_pi - log_pi_old)
-    log_ratio = policy_log_probs - old_log_probs.detach()
+    log_ratio = (policy_log_probs - old_log_probs.detach()).clamp(-20, 20)
     ratio = torch.exp(log_ratio)
 
     if loss_type == "grpo_no_clip":
@@ -231,7 +231,7 @@ def compute_grpo_clip_loss(
         min_obj = torch.minimum(unclipped_obj, clipped_obj)
         loss = -min_obj
 
-        is_clipped = clipped_obj < unclipped_obj
+        is_clipped = (ratio - clipped_ratio).abs() > 1e-8
         metadata = {
             "ratio": ratio,
             "log_ratio": log_ratio,
@@ -239,6 +239,8 @@ def compute_grpo_clip_loss(
             "is_clipped": is_clipped,
             "unclipped_obj": unclipped_obj,
             "clipped_obj": clipped_obj,
+            "approx_kl": (old_log_probs - policy_log_probs).mean(),
+            "entropy_proxy": -(policy_log_probs).mean(),
         }
         return loss, metadata
 
