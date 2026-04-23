@@ -400,6 +400,16 @@ def grpo_microbatch_train_step(
       3) batch mean -> microbatch_loss (scalar)
       4) scale by gradient_accumulation_steps
       5) backward
+    
+    Args:
+        policy_log_probs: (batch_size, sequence_length), per-token log-probabilities from the policy being trained.
+        response_mask: (batch_size, sequence_length), 1 for response tokens, 0 for prompt/padding.
+        gradient_accumulation_steps: int, the number of microbatches per optimizer step.
+        loss_type: Literal["no_baseline", "reinforce_with_baseline", "grpo_clip","grpo_no_clip"]
+        raw_rewards: (batch_size, 1).
+        advantages: (batch_size, 1).
+        old_log_probs: (batch_size, sequence_length)
+        cliprange: float, the clip range for the ratio.
     """
     if policy_log_probs.dim() != 2:
         raise ValueError(f"policy_log_probs must be (B,T), got {tuple(policy_log_probs.shape)}")
@@ -419,7 +429,7 @@ def grpo_microbatch_train_step(
         advantages=advantages,
         old_log_probs=old_log_probs,
         cliprange=cliprange,
-    )  # (B,T)
+    )  # (batch_size, sequence_length)
 
     # 2) sequence-level: masked mean over response tokens => (B,)
     mask = response_mask.to(dtype=per_token_loss.dtype, device=per_token_loss.device)
@@ -427,9 +437,9 @@ def grpo_microbatch_train_step(
     # - masked_mean：     每条样本按自己的有效 token 数平均，长短样本更公平
     # - masked_normalize：统一除以固定常数，长回答通常贡献更大总梯度
     if length_norm == "masked_mean":
-        per_example_loss = masked_mean(per_token_loss, mask, dim=1)  # (B,)
+        per_example_loss = masked_mean(per_token_loss, mask, dim=1)  # (batch_size,)
     elif length_norm == "masked_normalize":
-        per_example_loss = masked_normalize(per_token_loss, mask, dim=1, constant_normalizer=1024)  # (B,)
+        per_example_loss = masked_normalize(per_token_loss, mask, dim=1, constant_normalizer=1024)  # (batch_size,)
     else:
         raise ValueError(f"Unknown length_norm: {length_norm}")
 
