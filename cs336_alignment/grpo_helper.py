@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable, Dict, List, Tuple, Any,Literal
+from typing import Callable, Dict, List, Tuple, Literal
 import torch
 
 
@@ -72,48 +72,46 @@ def compute_group_normalized_rewards(
     group_mean = rewards_g.mean(dim=1, keepdim=True)  # (n_groups, 1)
     centered = rewards_g - group_mean  # (n_groups, group_size)
 
+    # Sample std (unbiased=True): matches assignment spec; NaN when group_size==1.
+    group_std = rewards_g.std(dim=1, keepdim=True, unbiased=True)  # (n_groups, 1)
+    zero_std_groups = (group_std.squeeze(1) == 0).sum().item()
+
     if normalize_by_std:
-        # std per group; use unbiased=False for stability (population std)
-        group_std = rewards_g.std(dim=1, keepdim=True, unbiased=True)  # (n_groups, 1)
-        denom = group_std + float(advantage_eps)
-        advantages_g = centered / denom
-        zero_std_groups = (group_std.squeeze(1) == 0).sum().item()
+        advantages_g = centered / (group_std + float(advantage_eps))
     else:
         advantages_g = centered
-        group_std = rewards_g.std(dim=1, keepdim=True, unbiased=True)
-        zero_std_groups = (group_std.squeeze(1) == 0).sum().item()
 
     advantages = advantages_g.reshape(-1)  # (rollout_batch_size,)
 
     # ---- 3) Metadata (all floats) ----
-    # Group-level stats (over groups)
-    group_means = rewards_g.mean(dim=1)  # (n_groups,)
-    group_stds = rewards_g.std(dim=1, unbiased=False)  # (n_groups,)
+    # group_std is already computed above (population std, shape (n_groups, 1))
+    group_means = rewards_g.mean(dim=1)       # (n_groups,)
+    group_stds = group_std.squeeze(1)         # (n_groups,) — reuse, no recompute
 
     metadata: Dict[str, float] = {
         "rollout_batch_size": float(rollout_batch_size),
         "n_groups": float(n_groups),
         "group_size": float(group_size),
-        "normalize_by_std": float(1.0 if normalize_by_std else 0.0),
+        "normalize_by_std": 1.0 if normalize_by_std else 0.0,
         "advantage_eps": float(advantage_eps),
         # Raw reward stats (overall)
-        "raw_reward_mean": float(raw_rewards.mean().item()),
-        "raw_reward_std": float(raw_rewards.std(unbiased=False).item()),
-        "raw_reward_min": float(raw_rewards.min().item()),
-        "raw_reward_max": float(raw_rewards.max().item()),
+        "raw_reward_mean": raw_rewards.mean().item(),
+        "raw_reward_std": raw_rewards.std(unbiased=False).item(),
+        "raw_reward_min": raw_rewards.min().item(),
+        "raw_reward_max": raw_rewards.max().item(),
         # Optional sub-reward stats (overall)
-        "raw_format_reward_mean": float(raw_format.mean().item()),
-        "raw_answer_reward_mean": float(raw_answer.mean().item()),
+        "raw_format_reward_mean": raw_format.mean().item(),
+        "raw_answer_reward_mean": raw_answer.mean().item(),
         # Group stats
-        "group_reward_mean_mean": float(group_means.mean().item()),
-        "group_reward_mean_std": float(group_means.std(unbiased=False).item()),
-        "group_reward_std_mean": float(group_stds.mean().item()),
+        "group_reward_mean_mean": group_means.mean().item(),
+        "group_reward_mean_std": group_means.std(unbiased=False).item(),
+        "group_reward_std_mean": group_stds.mean().item(),
         "zero_std_groups": float(zero_std_groups),
         # Advantage stats (overall)
-        "adv_mean": float(advantages.mean().item()),
-        "adv_std": float(advantages.std(unbiased=False).item()) if advantages.numel() > 1 else 0.0,
-        "adv_min": float(advantages.min().item()),
-        "adv_max": float(advantages.max().item()),
+        "adv_mean": advantages.mean().item(),
+        "adv_std": advantages.std(unbiased=False).item() if advantages.numel() > 1 else 0.0,
+        "adv_min": advantages.min().item(),
+        "adv_max": advantages.max().item(),
     }
 
     return advantages, raw_rewards, metadata
@@ -211,7 +209,7 @@ def compute_grpo_clip_loss(
     A = advantages.to(dtype=policy_log_probs.dtype, device=policy_log_probs.device)
 
     # ratio r = pi_theta / pi_old = exp(log_pi - log_pi_old)
-    log_ratio = policy_log_probs - old_log_probs
+    log_ratio = policy_log_probs - old_log_probs.detach()
     ratio = torch.exp(log_ratio)
 
     if loss_type == "grpo_no_clip":
