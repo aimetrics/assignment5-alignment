@@ -137,7 +137,7 @@ def compute_mean_entropy(logits, mask):
     return masked_entropy.sum() / sum_mask
 
 # --- vLLM Setup ---
-def init_vllm(model_id: str, device: str, seed: int, gpu_memory_utilization: float = 0.50):
+def init_vllm(model_id: str, device: str, seed: int, gpu_memory_utilization: float = 0.850):
     """Initialize vLLM for evaluation."""
     from vllm.model_executor import set_random_seed as vllm_set_random_seed
     vllm_set_random_seed(seed)
